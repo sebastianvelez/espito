@@ -3,59 +3,62 @@ library(dplyr)
 library(ggplot2)
 library(tidyr)
 
+
+# housekeeping> getting the data ready to rock----
+
 # reads raw data
 df <- read.csv(file = "~/ESPE/data/jvelez.csv")
 
 
-#sweet factors where needed----
+#sweet factors where needed
 df$nit <- factor(df$nit)
 df$sector <- factor(df$sector)
 
-# #checks dimensions and stuff----
-# numFirms <- length(
-#   unique(df$nit)
-#   )
-# numAnos <- length(
-#   unique(df$anios)
-#   )
-# numSectors <- length(
-#   unique(df$sec)
-#   )
-# 
-# print(paste("hay",numFirms, "firmas", numAnos, "años y", numSectors, "sectores"))
-# 
-# 
-# 
-# 
-# dfTemp <- df %>%
-#   count(nit)
-# 
-# 
-# print('numero de firmas por años que aparecen en la muestra')
-# table(dfTemp$n)
-# 
-# 
-# dfTemp <- df %>%
-#   group_by(anio) %>%
-#   summarise(
-#     numUniFirms = length(
-#       unique(nit)
-#       )
-#     )
-# 
-# 
-# print(
-#   paste(
-#     'el año en que más firmas hubo fue',
-#   dfTemp$anio[dfTemp$numUniFirms== max(dfTemp$numUniFirms)],
-#   'en el que hubo', max(dfTemp$numUniFirms),
-#   'firmas'
-#     )
-# )
+#checks dimensions and stuff----
+numFirms <- length(
+  unique(df$nit)
+  )
+numAnos <- length(
+  unique(df$anios)
+  )
+numSectors <- length(
+  unique(df$sec)
+  )
+
+print(paste("hay",numFirms, "firmas", numAnos, "años y", numSectors, "sectores"))
 
 
 
-# exploring profit distributions----
+
+dfTemp <- df %>%
+  count(nit)
+
+
+print('numero de firmas por años que aparecen en la muestra')
+table(dfTemp$n)
+
+
+dfTemp <- df %>%
+  group_by(anio) %>%
+  summarise(
+    numUniFirms = length(
+      unique(nit)
+      )
+    )
+
+
+print(
+  paste(
+    'el año en que más firmas hubo fue',
+  dfTemp$anio[dfTemp$numUniFirms== max(dfTemp$numUniFirms)],
+  'en el que hubo', max(dfTemp$numUniFirms),
+  'firmas'
+    )
+)
+
+
+
+# exploring profit distributions
 dfSummary <- df %>%
   group_by(sector, anio) %>%
   summarise(
