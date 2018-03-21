@@ -2,7 +2,7 @@
 ### Escenarios contrafactuales con "entrada"" y "salida""
 
 
-------?image=path/to/image.file&size=auto h%
+---
 
 ### Ajuste: observado y predicho
 
@@ -11,13 +11,17 @@
 ---
 
 
+
 ### Contrafactual: Apalancamiento
 
 Las firmas con peor desempeño se endeudan al ritmo de las mejores
 
 ![](https://i.imgur.com/6PnRyEq.png)
 
+
+
 ---
+
 
 
 ### Contrafactual: Tasa
@@ -29,6 +33,7 @@ Las firmas con peor desempeño acceden a las tasas promedio de las mejores
 ---
 
 
+
 ### Contrafactual: Competencia
 
 Se le impone a los sectores de las peores firmas el hhi de las mejores
@@ -37,6 +42,7 @@ Se le impone a los sectores de las peores firmas el hhi de las mejores
 ![](https://i.imgur.com/WazmDR9.png)
 
 ---
+
 
 
 ### Contrafactual: Exportaciones
