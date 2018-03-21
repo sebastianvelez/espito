@@ -2,7 +2,7 @@
 ### Escenarios contrafactuales con "entrada"" y "salida""
 
 
----
+------?image=path/to/image.file&size=auto h%
 
 ### Ajuste: observado y predicho
 
