@@ -760,14 +760,167 @@ p <- plot_grid( p, leyenda, rel_widths = c(3, .3))
 
 # determinantes salida de la muestra ---- 
 
-hist(df$anios)
+    # stayers and leavers
+
+df1 <- df %>%
+  mutate(
+    stayer = case_when(
+      anios == 9 ~ 1,
+      anios < 9 ~ 0,
+      TRUE ~ NA_real_
+      )
+    ) %>%
+  group_by(nit) %>%
+  summarise(
+    stayer = max(stayer),
+    anios = max(anios)
+    )
+
+table(df1$stayer)
+table(df1$anios)
+
 
 df <- df %>%
-  group_by(nit) %>%
   mutate(
-    exit = anios < 9
-  ) %>%
-  summarise(
-    exit1 = max(exit)
+    stayer = factor(
+      case_when(
+        anios == 9 ~ 'Stayer',
+        anios < 9 ~ 'Leaver',
+        TRUE ~ NA_character_
+      )
+    )
+  )
+  
+
+p0 <- ggplot(df, aes(x=anio, y=pn_bruta)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=stayer)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=stayer)) + 
+  theme_minimal() + theme(axis.title.y=element_blank()) + labs(title= 'Producción')
+leyenda3 <- get_legend(p0)
+
+p1 <- ggplot(df, aes(x=anio, y=pn_bruta)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=stayer)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=stayer)) + 
+  theme_minimal() + theme(axis.title.y=element_blank(), axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Producción')
+
+
+p2 <- ggplot(df, aes(x=anio, y=omega_acf_sample)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=stayer)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=stayer))  + 
+  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Productividad')
+
+
+p3 <- ggplot(df, aes(x=anio, y=impo_fob)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=stayer)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=stayer)) + 
+  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Importaciones')
+
+
+p4 <- ggplot(df, aes(x=anio, y=expo_fob)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=stayer)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_noraxis.title.x=element_blank(),mal,alpha=0.03,linetype="dotted", aes(color=stayer)) + 
+  theme_minimal() + theme(axis.title.y=element_blank(), legend.position = 'none') + labs(title= 'Exportaciones')
+
+
+p5 <- ggplot(df, aes(x=anio, y=Blev_bg)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=stayer)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=stayer)) + 
+  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Apalancamiento')
+
+
+p6 <- ggplot(df, aes(x=anio, y=Liqui_bg)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=stayer)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=stayer)) + 
+  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Liquidez')
+
+pa <- plot_grid(p1,p2,p3,p4,p5,p6)
+paa <- plot_grid(pa, leyenda3,rel_widths = c(3, .3))
+
+
+
+p7 <- ggplot(df, aes(x=anio, y=ratio1_bg)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=stayer)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=stayer)) + 
+  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Tasa Impuestos')
+
+
+p8 <- ggplot(df, aes(x=anio, y=tasap)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=stayer)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=stayer)) + 
+  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Tasa crédito')
+
+
+p9 <- ggplot(df, aes(x=anio, y=wdev_expo_s)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=stayer)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=stayer)) + 
+  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Tasa de Cambio(X)')
+
+
+p10 <- ggplot(df, aes(x=anio, y=wdev_impo_s)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=stayer)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=stayer)) + 
+  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Tasa de Cambio(M)')
+
+
+p11 <- ggplot(df, aes(x=anio, y=ventas_sec_1)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=stayer)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=stayer)) + 
+  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Ventas Sector')
+
+
+p12 <- ggplot(df, aes(x=anio, y=si_alt)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=stayer)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=stayer)) + 
+  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Participación')
+
+
+pb <- plot_grid(p7,p8,p9,p10,p11,p12)
+pbb <- plot_grid(pb, leyenda3,rel_widths = c(3, .3))
+
+
+    #logit (probability of being a stayer)
+library(broom)
+library(stargazer)
+
+miformula <- formula('stayer ~  pn_bruta + omega_acf_sample +   
+    impo_fob + expo_fob + Blev_bg + Liqui_bg + ratio1_bg +          
+    tasap + duracion_meses2p + wdev_impo_s + wdev_expo_s + ventas_sec_1 +        
+    si_alt + hhi_alt + utilidad_bruta'
   )
 
+miformulaFE <- formula('stayer ~ pn_bruta + omega_acf_sample +   
+    impo_fob + expo_fob + Blev_bg + Liqui_bg + ratio1_bg +          
+    tasap + duracion_meses2p + wdev_impo_s + wdev_expo_s + ventas_sec_1 +        
+    si_alt + hhi_alt + utilidad_bruta +  sector'
+  )
+
+dfLogit <- df %>%
+  mutate(sector=factor(sector)) %>%
+  group_by(nit, stayer,sector) %>%
+  summarise(
+    pn_bruta = log(mean(pn_bruta, na.rm = T)),
+    omega_acf_sample = log(mean(omega_acf_sample, na.rm = T)),
+    impo_fob = mean(impo_fob, na.rm = T),
+    expo_fob = mean(expo_fob, na.rm = T),
+    Blev_bg = log(mean(Blev_bg, na.rm = T)),
+    Liqui_bg = mean(Liqui_bg, na.rm = T),
+    ratio1_bg = mean(ratio1_bg, na.rm = T),
+    tasap = mean(tasap, na.rm = T),
+    duracion_meses2p = mean(duracion_meses2p, na.rm = T),
+    wdev_impo_s = mean(wdev_impo_s, na.rm = T),
+    wdev_expo_s = mean(wdev_expo_s, na.rm = T),
+    ventas_sec_1 = log(mean(ventas_sec_1, na.rm = T)),
+    si_alt = log(mean(si_alt, na.rm = T)),
+    hhi_alt = log(mean(hhi_alt, na.rm = T)),
+    utilidad_antesT = mean(utilidad_antesT, na.rm = T),
+    utilidad_operacional = mean(utilidad_operacional, na.rm = T),
+    utilidad_bruta = mean(utilidad_bruta, na.rm = T)
+  )
+
+dfLogit$stayer <- relevel(dfLogit$stayer, ref = 'Stayer')
+
+modelo <- glm(miformula,data = dfLogit,family = binomial(link = 'logit'))
+modeloFE <- glm(miformulaFE,data = dfLogit,family = binomial(link = 'logit'))
+
+
+stargazer(modelo, modeloFE, type = "text")
