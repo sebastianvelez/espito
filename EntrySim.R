@@ -4,39 +4,42 @@ library(ggplot2)
 library(tidyr)
 library(plm)
 library(cowplot)
+library(stargazer)
+library(reshape2)
 
 # reads raw data
+rm(list=ls())
 df <- read.csv(file = "~/ESPE/data/jvelez.csv")
 
-# housekeeping> getting the data ready to rock----
+# housekeeping and getting the data ready to rock----
 
 #sweet factors where needed
 df$nit <- factor(df$nit)
 df$sector <- factor(df$sector)
 
 
-#labels for sectorsManufacture of food products and beverages
-levels(df$sector) <- c(
-  'Food products and beverages'
-,'Tobacco products'
-,'Textiles'
-,'Wearing apparel; dressing and dyeing of fur'
-,'Tanning and dressing of leather'
-,'Wood and of products of wood and cork'
-,'Paper and paper products'
-,'Publishing, printing and reproduction of recorded media'
-,'Chemicals and chemical products'
-,'Rubber and plastics products'
-,'Other non-metallic mineral products'
-,'Fabricated metal products, except machinery and equipment'
-,'Machinery and equipment'
-,'Office, accounting and computing machinery'
-,'Electrical machinery and apparatus n.e.c.'
-,'Radio, television and communication equipment and apparatus'
-,'Medical, precision and optical instruments, watches and clocks'
-,'Motor vehicles, trailers and semi-trailers'
-,'Other transport equipment'
-,'Furniture')
+# #labels for sectorsManufacture of food products and beverages
+# levels(df$sector) <- c(
+#   'Food products and beverages'
+# ,'Tobacco products'
+# ,'Textiles'
+# ,'Wearing apparel; dressing and dyeing of fur'
+# ,'Tanning and dressing of leather'
+# ,'Wood and of products of wood and cork'
+# ,'Paper and paper products'
+# ,'Publishing, printing and reproduction of recorded media'
+# ,'Chemicals and chemical products'
+# ,'Rubber and plastics products'
+# ,'Other non-metallic mineral products'
+# ,'Fabricated metal products, except machinery and equipment'
+# ,'Machinery and equipment'
+# ,'Office, accounting and computing machinery'
+# ,'Electrical machinery and apparatus n.e.c.'
+# ,'Radio, television and communication equipment and apparatus'
+# ,'Medical, precision and optical instruments, watches and clocks'
+# ,'Motor vehicles, trailers and semi-trailers'
+# ,'Other transport equipment'
+# ,'Furniture')
 
 
 
@@ -138,6 +141,58 @@ df <- df%>%
       Bcte
   )
 
+# # crea contrafactual exportaciones EXTREMO
+# # A las firmas peores, se les asignan las exportaciones medias (y medianas) de firmas en el mismo sector
+# dfsum <- df%>%
+#   group_by(sector, anio, Grupo) %>%
+#   summarise(
+#     meanexp = max(expo_fob, na.rm = T)
+#   ) %>%
+#   filter(Grupo=='Mejores') %>%
+#   select(-Grupo)
+# 
+# df <- full_join(df, dfsum, by= c('sector', 'anio'))
+# 
+# 
+#     
+# df <- 
+#   df %>% 
+#   mutate(
+#     newExpo2 = case_when(
+#       Grupo %in% c('Mejores', 'Resto') ~ expo_fob,
+#       Grupo == 'Peores' ~ meanexp,
+#       TRUE  ~ NA_real_
+#     )
+#   ) %>% 
+#   ungroup() %>%
+#   mutate(
+#     cfExpo2= # revenue if exports are stuck in initial year
+#       Bomega_acf_sample*omega_acf_sample +
+#       Bwdev_expo_s*wdev_expo_s +
+#       Bwdev_impo_s*wdev_impo_s +
+#       Bexpo_fob*newExpo2 +
+#       Bimpo_fob*impo_fob +
+#       BBlev_bg*Blev_bg + 
+#       BLiqui_bg*Liqui_bg +
+#       Btasap*tasap +
+#       Bduracion_meses2p*duracion_meses2p +
+#       Bratio1_bg*ratio1_bg +
+#       Bhhi_alt*hhi_alt + 
+#       Bsi_alt*si_alt +
+#       Bventas_sec*ventas_sec_1 +
+#       B2005*a2005 +
+#       B2006*a2006 +
+#       B2007*a2007 +
+#       B2008*a2008 +
+#       B2009*a2009 +
+#       B2010*a2010 +
+#       B2011*a2011 +
+#       B2012*a2012 +
+#       B2013*a2013 +
+#       fixed_effect + 
+#       Bcte
+#   )
+# 
 
 # # crea contrafactual importaciones
 # cada firma se queda con el nivel incial (propio) de importaciones
@@ -179,7 +234,7 @@ df <- df%>%
 df <- df%>%
   group_by(nit) %>%
   mutate(
-    newLev = max(Blev_bg)) %>% 
+    newLev = first(Blev_bg)) %>% 
   ungroup() %>%
   mutate(
     cfLev= # revenue if leverage is stuck in initial year
@@ -209,42 +264,85 @@ df <- df%>%
       Bcte
   )
 
+# crea contrafactual tasap
+# cada firma se queda con el nivel incial (propio) de tasa de inter閟
+df <- df%>%
+  group_by(nit) %>%
+  mutate(
+    newTasap = first(tasap)) %>% 
+  ungroup() %>%
+  mutate(
+    cfTasap= # revenue if leverage is stuck in initial year
+      Bomega_acf_sample*omega_acf_sample +
+      Bwdev_expo_s*wdev_expo_s +
+      Bwdev_impo_s*wdev_impo_s +
+      Bexpo_fob*expo_fob +
+      Bimpo_fob*impo_fob +
+      BBlev_bg*Blev_bg + 
+      BLiqui_bg*Liqui_bg +
+      Btasap*newTasap +
+      Bduracion_meses2p*duracion_meses2p +
+      Bratio1_bg*ratio1_bg +
+      Bhhi_alt*hhi_alt + 
+      Bsi_alt*si_alt +
+      Bventas_sec*ventas_sec_1 +
+      B2005*a2005 +
+      B2006*a2006 +
+      B2007*a2007 +
+      B2008*a2008 +
+      B2009*a2009 +
+      B2010*a2010 +
+      B2011*a2011 +
+      B2012*a2012 +
+      B2013*a2013 +
+      fixed_effect + 
+      Bcte
+  )
+
+
+## CF indices
+df <- df %>%
+  group_by(nit) %>%
+  mutate(
+    cfExpoIndex2 = 100 + (cfExpo - first(cfExpo))/cfExpo,
+    baseIndex = 100 + (baseline - first(baseline))/baseline,
+    cfImpoIndex = 100 + (cfImpo - first(cfImpo))/cfImpo,
+    cfLevIndex = 100 + (cfLev - first(cfLev))/cfLev,
+    cfTasapIndex = 100 + (cfTasap- first(cfTasap))/cfTasap
+    
+  )
+
+
 # counterfactual expo ----
 
 # Participaci贸n de cada sector en el total de exportaciones
-dfStack <- df %>%
-  group_by(anio, sector) %>%
-  summarise(expo = sum(expo_fob))
+# dfStack <- df %>%
+#   group_by(anio, sector) %>%
+#   summarise(expo = sum(expo_fob))
+# 
+# ggplot(dfStack, aes(x=anio, y=expo, fill=sector)) + 
+#   geom_area(color='black', size=.2, alpha=.3) + theme_minimal() +  
+#   annotate("text", x = 2010.7,  y = 1.68e+10, 
+#     label = "Exportaciones caen desde 2007. Entre 2008-2011 algunos \nsectores se expanden (21:papeles) y otros se contraen \n(34 y 32: manufactura de carros y de aparatos electr贸nicos)") +
+#   labs(y='Valor Exportaciones')+ theme(axis.title.x=element_blank())
 
-ggplot(dfStack, aes(x=anio, y=expo, fill=sector)) + 
-  geom_area(color='black', size=.2, alpha=.3) + theme_minimal() +  
-  annotate("text", x = 2010.7,  y = 1.68e+10, 
-    label = "Exportaciones caen desde 2007. Entre 2008-2011 algunos \nsectores se expanden (21:papeles) y otros se contraen \n(34 y 32: manufactura de carros y de aparatos electr贸nicos)") +
-  labs(y='Valor Exportaciones')+ theme(axis.title.x=element_blank())
 
-
-# Participaci贸n de cada grupo en el total de exportaciones
-dfStack <- df %>%
-  group_by(anio, Grupo) %>%
-  summarise(expo = sum(expo_fob))
-
-ggplot(dfStack, aes(x=anio, y=expo, fill=Grupo)) + 
-  geom_area(color='black', size=.2, alpha=.3) + theme_minimal() +
-  annotate("text", x = 2010.5,  y = 1.65e+10, 
-    label = "Las peores nunca se recuperaron. \nLas mejores ganan terreno levemente") +
-  labs(y='Valor Exportaciones')+ theme(axis.title.x=element_blank())
+# Participacion de cada grupo en el total de exportaciones
+# dfStack <- df %>%
+#   group_by(anio, Grupo) %>%
+#   summarise(expo = sum(expo_fob)/1e+09)
+# 
+# ggplot(dfStack, aes(x=anio, y=expo, fill=Grupo)) + 
+#   geom_area(color='black', size=.2, alpha=.3) +
+#   scale_x_continuous(breaks = scales::pretty_breaks(n = 9)) +
+#   labs(y='Valor Exportaciones (1000 millones)', x = 'A駉') +
+#   theme_minimal()+
+#   theme(panel.grid.minor.x = element_blank() )
 
 
 # plot contrafactual
 
   # lines
-
-df <- df %>%
-  group_by(nit) %>%
-  mutate(
-    cfExpoIndex2 = 100 + (cfExpo - first(cfExpo))/cfExpo,
-    baseIndex = 100 + (baseline - first(baseline))/baseline
-  )
 
 p1 <- ggplot(df, aes(x=anio, y=baseIndex)) + 
   stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=Grupo)) +
@@ -280,118 +378,12 @@ p3 <- ggplot(df, aes(x=anio, y=cfExpoIndex2)) +
 
 p5 <- plot_grid(p1, p2, p4, p3)
 p6 <- plot_grid( p5, leyenda, rel_widths = c(3, .3))
-p7 <- add_sub(p6,label = 'Contrafactual: las exportaciones se fijan en el nivel incial')
+p7 <- add_sub(p6,label = 'Contrafactual: las exportaciones se fijan en el nivel incial') + theme_minimal()
 
-ggdraw(p7)
+ggdraw(p7) 
 
+# lines 222222222
 
-
-    # areas
-
-
-dfStack <- df %>%
-  group_by(anio, Grupo) %>%
-  summarise(
-    cfExpo = sum(cfExpo),
-    baseline = sum(baseline),
-    diff = baseline - cfExpo
-    )
-
-p0 <- ggplot(dfStack, aes(x=anio, y=baseline, fill=Grupo)) + 
-  geom_area(color='black', size=.2, alpha=.3) + theme_minimal()
-
-leyenda2 <- get_legend(p0)
-
-p1 <- ggplot(dfStack, aes(x=anio, y=baseline, fill=Grupo)) + 
-  geom_area(color='black', size=.2, alpha=.3) + theme_minimal() + 
-  theme(legend.position = 'none')
-
-p2 <- ggplot(dfStack, aes(x=anio, y=cfExpo, fill=Grupo)) + 
-  geom_area(color='black', size=.2, alpha=.3) + theme_minimal() + 
-  theme(legend.position = 'none', axis.title.y=element_blank())
-
-p3 <- plot_grid(p1,p2)
-
-p4 <- plot_grid(p3,leyenda2, rel_widths = c(3,.3))
-
-
-
-## TEST diverging bars graph by sector (winners and loser of counterfactual)
-
-dfDiv <- df %>%
-  group_by(sector) %>%
-  summarise(
-    cfExpo = sum(cfExpo),
-    baseline = sum(baseline),
-  ) %>%
-  mutate(
-    diverge = cfExpo - baseline,
-    divergestd = (diverge - mean(diverge, na.rm = T))/sd(diverge, na.rm = T),
-    desemp = case_when(
-        divergestd >=0 ~ 'Ganan',
-        divergestd < 0 ~ 'Pierden',
-        TRUE ~ NA_character_
-      )
-  )
-
-ggplot(dfDiv, aes(x=sector, y=diverge)) + 
-  geom_bar(stat='identity', aes(fill=desemp), width=.5) +
-  coord_flip()
-
-
-dfDiv <- df %>%
-  group_by(Grupo) %>%
-  summarise(
-    cfExpo = sum(cfExpo),
-    baseline = sum(baseline),
-  ) %>% ungroup() %>%
-  mutate(
-    diverge = cfExpo - baseline,
-    divergestd = (diverge - mean(diverge, na.rm = T))/sd(diverge, na.rm = T),
-    desemp = case_when(
-      divergestd >= 0 ~ 'Above mean',
-      divergestd < 0 ~ 'Below mean',
-      TRUE ~ NA_character_
-    )
-  ) 
-
-ggplot(dfDiv, aes(x=Grupo, y=diverge)) + 
-  geom_bar(stat='identity', aes(fill=desemp), width=.5) +
-  coord_flip()
-
-
-
-# counterfactual impo ----
-
-# Participaci贸n de cada sector en el total de importaciones
-dfStack <- df %>%
-  group_by(anio, sector) %>%
-  summarise(im = sum(impo_fob))
-
-ggplot(dfStack, aes(x=anio, y=im, fill=sector)) + 
-  geom_area(color='black', size=.2, alpha=.3) + 
-  annotate("text", x = 2008,  y = 2.3e+10, 
-    label = "Importaciones aumentan desde 2009. Entre 2008-2011 algunos sectores \nse contraen (34 y 30: manufactura de carros y de maquinaria )") +
-  labs(y='Valor Importaciones')+ theme(axis.title.x=element_blank())
-
-# Participaci贸n de cada Grupo en el total de importaciones
-dfStack <- df %>%
-  group_by(anio, Grupo) %>%
-  summarise(im = sum(impo_fob))
-
-ggplot(dfStack, aes(x=anio, y=im, fill=Grupo)) + 
-  geom_area(color='black', size=.2, alpha=.3) +
-  labs(y='Valor Importaciones')+ theme(axis.title.x=element_blank())
-
-
-# plot contrafactual
-
-df <- df %>%
-  group_by(nit) %>%
-  mutate(
-    cfImpoIndex = 100 + (cfImpo - first(cfImpo))/cfImpo,
-  ) %>%
-  filter(cfImpoIndex > -100)
 
 p1 <- ggplot(df, aes(x=anio, y=baseIndex)) + 
   stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=Grupo)) +
@@ -412,13 +404,140 @@ p2 <- ggplot(df, aes(x=anio, y=baseIndex)) +
   theme(legend.position = 'none', axis.title.x=element_blank(), axis.title.y=element_blank()) +
   coord_cartesian(ylim = c(97,103), expand = T) 
 
-
-p4 <- ggplot(df, aes(x=anio, y=cfImpoIndex)) + 
+p4 <- ggplot(df, aes(x=anio, y=cfExpoIndex2)) + 
   stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=Grupo)) +
   theme(legend.position = 'none',axis.title.x=element_blank()) + 
   coord_cartesian(ylim = c(97,103), expand = T)  + labs(y = 'Ingreso contrafactual')
 
-p3 <- ggplot(df, aes(x=anio, y=cfImpoIndex)) + 
+p3 <- ggplot(df, aes(x=anio, y=cfExpoIndex2)) + 
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=Grupo)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=Grupo)) +
+  theme(legend.position = 'none',axis.title.x=element_blank(), axis.title.y=element_blank()) +
+  coord_cartesian(ylim = c(97,103), expand = T)
+
+p5 <- plot_grid(p1, p2, p4, p3)
+p6 <- plot_grid( p5, leyenda, rel_widths = c(3, .3))
+p7 <- add_sub(p6,label = 'Contrafactual: las exportaciones se fijan en el nivel incial') + theme_minimal()
+
+ggdraw(p7) 
+
+
+
+    # Bar plot of difference in baseline revenue (by year and aggregated over years) and export CF
+
+dfStack <- df %>%
+  group_by(anio, Grupo) %>%
+  summarise(
+    cfExpo = sum(cfExpo, na.rm = T),
+    baseline = sum(baseline, na.rm = T),
+    ) %>%
+  mutate(diff= (cfExpo - baseline)/1e+9) %>%
+  filter(anio != 2005)
+
+
+ p1bars <- ggplot(dfStack, aes(x=anio, y=diff, fill=Grupo)) +
+   geom_bar(stat='identity', position='dodge', width=.5) + 
+   geom_hline(yintercept = 0) +
+   scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
+   labs(y = 'Diferencia en ingresos (1000 millones)', x = 'A駉') +
+   theme_minimal() + 
+   theme(panel.grid.minor.x = element_blank(),
+     panel.grid.major.x = element_blank())
+
+ 
+ 
+ p1lines <- ggplot(dfStack, aes(x=anio, y=diff)) +
+   geom_line(aes(colour=Grupo)) + 
+   geom_hline(yintercept = 0) +
+   scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
+   labs(y = 'Diferencia en ingresos (1000 millones)', x = 'A駉') +
+   theme_minimal() + 
+   theme(panel.grid.minor.x = element_blank(),
+     panel.grid.major.x = element_blank())
+
+# dfDiv <- df %>%
+#   group_by(Grupo) %>%
+#   summarise(
+#     cfExpo = sum(cfExpo, na.rm = T),
+#     baseline = sum(baseline, na.rm = T),
+#   ) %>% ungroup() %>%
+#   mutate(
+#     diverge = (cfExpo - baseline)/1e+9,
+#     divergestd = (diverge - mean(diverge, na.rm = T))/sd(diverge, na.rm = T),
+#     desemp = case_when(
+#       divergestd >= 0 ~ 'Ganancias',
+#       divergestd < 0 ~ 'P閞didas',
+#       TRUE ~ NA_character_
+#     )
+#   ) 
+# 
+# p2 <- ggplot(dfDiv, aes(x=Grupo, y=diverge)) + 
+#   geom_bar(stat='identity', aes(fill=desemp), width=.5) + 
+#   geom_hline(yintercept = 0) +
+#   labs(y = 'Diferencia en ingresos (1000 millones)') + 
+#   theme_minimal() +
+#   theme(legend.title = element_blank(), 
+#     panel.grid.major.x = element_blank()) 
+# 
+# 
+# p3 <- plot_grid(p1,p2)
+
+# counterfactual impo ----
+
+# Participaci贸n de cada sector en el total de importaciones
+# dfStack <- df %>%
+#   group_by(anio, sector) %>%
+#   summarise(im = sum(impo_fob))
+# 
+# ggplot(dfStack, aes(x=anio, y=im, fill=sector)) + 
+#   geom_area(color='black', size=.2, alpha=.3) + 
+#   annotate("text", x = 2008,  y = 2.3e+10, 
+#     label = "Importaciones aumentan desde 2009. Entre 2008-2011 algunos sectores \nse contraen (34 y 30: manufactura de carros y de maquinaria )") +
+#   labs(y='Valor Importaciones')+ theme(axis.title.x=element_blank())
+
+# Participaci贸n de cada Grupo en el total de importaciones
+# dfStack <- df %>%
+#   group_by(anio, Grupo) %>%
+#   summarise(im = sum(impo_fob) / 1e+9)
+# 
+# someplot<- ggplot(dfStack, aes(x=anio, y=im, fill=Grupo)) + 
+#   geom_area(color='black', size=.2, alpha=.3) +
+#   scale_x_continuous(breaks = scales::pretty_breaks(n = 9)) +
+#   labs(y='Valor Exportaciones (1000 millones)', x = 'A帽o') +
+#   theme_minimal()+
+#   theme(panel.grid.minor.x = element_blank() )
+
+# plot contrafactual
+
+df1 <- df %>%
+  filter(cfImpoIndex > -100)
+
+p1 <- ggplot(df1, aes(x=anio, y=baseIndex)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=Grupo)) +
+  theme(legend.position = 'none',axis.title.x=element_blank()) + 
+  coord_cartesian(ylim = c(97,103), expand = T) + labs(y = 'Ingreso base')
+
+p2 <- ggplot(df1, aes(x=anio, y=baseIndex)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=Grupo)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=Grupo)) + 
+  # theme(legend.position = 'none') +
+  coord_cartesian(ylim = c(97,103), expand = T) 
+
+leyenda <- get_legend(p2)
+
+p2 <- ggplot(df1, aes(x=anio, y=baseIndex)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=Grupo)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=Grupo)) + 
+  theme(legend.position = 'none', axis.title.x=element_blank(), axis.title.y=element_blank()) +
+  coord_cartesian(ylim = c(97,103), expand = T) 
+
+
+p4 <- ggplot(df1, aes(x=anio, y=cfImpoIndex)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=Grupo)) +
+  theme(legend.position = 'none',axis.title.x=element_blank()) + 
+  coord_cartesian(ylim = c(97,103), expand = T)  + labs(y = 'Ingreso contrafactual')
+
+p3 <- ggplot(df1, aes(x=anio, y=cfImpoIndex)) + 
   stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=Grupo)) + 
   stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=Grupo)) +
   theme(legend.position = 'none',axis.title.x=element_blank(), axis.title.y=element_blank()) +
@@ -431,16 +550,152 @@ p7 <- add_sub(p6,label = 'Contrafactual: las importaciones se fijan en el nivel 
 ggdraw(p7)
 
 
+# Bar plot of difference in baseline revenue (by year and aggregated over years) and import CF
+
+dfStack <- df %>%
+  group_by(anio, Grupo) %>%
+  summarise(
+    cfImpo = sum(cfImpo, na.rm = T),
+    baseline = sum(baseline, na.rm = T),
+  ) %>%
+  mutate(diff= (cfImpo - baseline)/1e+9) %>%
+  filter(anio != 2005)
+
+
+p1abars <- ggplot(dfStack, aes(x=anio, y=diff, fill=Grupo)) +
+  geom_bar(stat='identity', position='dodge', width=.5) + 
+  geom_hline(yintercept = 0) +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
+  labs(y = 'Diferencia en ingresos (1000 millones)', x = 'A駉s') +
+  theme_minimal() + 
+  theme(panel.grid.minor.x = element_blank(),
+    panel.grid.major.x = element_blank())
+
+p1alines <- ggplot(dfStack, aes(x=anio, y=diff)) +
+  geom_line(aes(colour=Grupo)) + 
+  geom_hline(yintercept = 0) +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
+  labs(y = 'Diferencia en ingresos (1000 millones)', x = 'A駉s') +
+  theme_minimal() + 
+  theme(panel.grid.minor.x = element_blank(),
+    panel.grid.major.x = element_blank())
+
+
+dfDiv <- df %>%
+  group_by(Grupo) %>%
+  summarise(
+    cfImpo = sum(cfImpo, na.rm = T),
+    baseline = sum(baseline, na.rm = T),
+  ) %>% ungroup() %>%
+  mutate(
+    diverge = (cfImpo - baseline)/1e+9,
+    divergestd = (diverge - mean(diverge, na.rm = T))/sd(diverge, na.rm = T),
+    desemp = case_when(
+      divergestd >= 0 ~ 'Ganancias',
+      divergestd < 0 ~ 'P閞didas',
+      TRUE ~ NA_character_
+    )
+  ) 
+
+# p2 <- ggplot(dfDiv, aes(x=Grupo, y=diverge)) + 
+#   geom_bar(stat='identity', aes(fill=desemp), width=.5) + 
+#   geom_hline(yintercept = 0) +
+#   labs(y = 'Diferencia en ingresos (1000 millones)') + 
+#   theme_minimal() +
+#   theme(legend.title = element_blank(), 
+#     panel.grid.major.x = element_blank()) 
+# 
+# 
+# p3 <- plot_grid(p1a,p2, align = 'h')
+
+
+# 1 limpio: barras contrafactuales IMPO-EXPO lado a lado ----
+
+dfStack <- df %>%
+  group_by(anio, Grupo) %>%
+  summarise(
+    cfExpo = sum(cfExpo, na.rm = T),
+    baseline = sum(baseline, na.rm = T),
+  ) %>%
+  mutate(diff= (cfExpo - baseline)/1e+9) %>%
+  filter(anio != 2005)
+
+
+p0 <- ggplot(dfStack, aes(x=anio, y=diff, fill=Grupo)) +
+  geom_bar(stat='identity', position='dodge', width=.5) + 
+  geom_hline(yintercept = 0) +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
+  labs(y = 'Diferencia en ingresos (1000 millones)', x = 'A駉') +
+  theme_minimal() + 
+  theme(panel.grid.minor.x = element_blank(),
+    panel.grid.major.x = element_blank(),
+    axis.text.x = element_text(angle = 60),
+    legend.position="bottom", 
+    legend.title = element_blank(),
+    legend.margin = margin(c(0,0,0,0)))
+
+leyenda <- get_legend(p0)
+
+p1 <- ggplot(dfStack, aes(x=anio, y=diff, fill=Grupo)) +
+  geom_bar(stat='identity', position='dodge', width=.5) + 
+  geom_hline(yintercept = 0) +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
+  labs(y = 'Diferencia en ingresos (1000 millones)', x = 'A駉') +
+  theme_minimal() + 
+  theme(panel.grid.minor.x = element_blank(),
+    panel.grid.major.x = element_blank(),
+    legend.position = 'none',
+    axis.text.x = element_text(angle = 60), 
+    plot.margin = unit(c(0, 0, 0, 0), "cm")
+  ) +
+  coord_cartesian(ylim = c(-4.1,1), expand = T)
+
+p1a <- ggdraw(
+  add_sub(p1, "Exportaciones fijas \nen nivel incial")
+  )
+
+
+dfStack <- df %>%
+  group_by(anio, Grupo) %>%
+  summarise(
+    cfImpo = sum(cfImpo, na.rm = T),
+    baseline = sum(baseline, na.rm = T),
+  ) %>%
+  mutate(diff= (cfImpo - baseline)/1e+9) %>%
+  filter(anio != 2005)
+
+
+p2 <- ggplot(dfStack, aes(x=anio, y=diff, fill=Grupo)) +
+  geom_bar(stat='identity', position='dodge', width=.5) + 
+  geom_hline(yintercept = 0) +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
+  labs(y = 'Diferencia en ingresos (1000 millones)', x = 'A駉') +
+  theme_minimal() + 
+  theme(panel.grid.minor.x = element_blank(),
+    panel.grid.major.x = element_blank(),
+    legend.position = 'none',
+    axis.text.x = element_text(angle = 60))+
+  coord_cartesian(ylim = c(-4.1,1), expand = T)
+
+
+p2a <- ggdraw(
+  add_sub(p2, 'Importaciones fijas \nen nivel incial')
+  )
+
+pp <-plot_grid(p1a, p2a, align = 'v')
+
+pp1 <- plot_grid(pp, leyenda,
+  ncol = 1,
+  rel_heights = c(1,.1))
+
+
+
 
 
 # counterfactual lev ----
 # plot contrafactual
 
 df <- df %>%
-  group_by(nit) %>%
-  mutate(
-    cfLevIndex = 100 + (cfLev - first(cfLev))/cfLev,
-  ) %>%
   filter(
     cfLevIndex > -100
   )
@@ -485,9 +740,159 @@ ggdraw(p7)
 
 
 
+# Bar plot of difference in baseline revenue (by year and aggregated over years) and leverage CF
+
+dfStack <- df %>%
+  group_by(anio, Grupo) %>%
+  summarise(
+    cfLev = sum(cfLev, na.rm = T),
+    baseline = sum(baseline, na.rm = T),
+  ) %>%
+  mutate(diff= (cfLev  - baseline)/1e+9) %>%
+  filter(anio != 2005)
 
 
-#checks dimensions and stuff ----
+p1 <- ggplot(dfStack, aes(x=anio, y=diff, fill=Grupo)) +
+  geom_bar(stat='identity', position='dodge', width=.5) + 
+  geom_hline(yintercept = 0) +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
+  labs(y = 'Diferencia en ingresos (1000 millones)', x = 'A帽os') +
+  theme_minimal() + 
+  theme(panel.grid.minor.x = element_blank(),
+    panel.grid.major.x = element_blank(),
+    axis.text.x = element_text(angle = 45))
+
+
+dfDiv <- df %>%
+  group_by(Grupo) %>%
+  summarise(
+    cfLev = sum(cfLev, na.rm = T),
+    baseline = sum(baseline, na.rm = T),
+  ) %>% ungroup() %>%
+  mutate(
+    diverge = (cfLev - baseline)/1e+9,
+    divergestd = (diverge - mean(diverge, na.rm = T))/sd(diverge, na.rm = T),
+    desemp = case_when(
+      divergestd >= 0 ~ 'Ganancias',
+      divergestd < 0 ~ 'Perdidas',
+      TRUE ~ NA_character_
+    )
+  ) 
+
+p2 <- ggplot(dfDiv, aes(x=Grupo, y=diverge)) + 
+  geom_bar(stat='identity', aes(fill=desemp), width=.5) + 
+  geom_hline(yintercept = 0) +
+  labs(y = 'Diferencia en ingresos (1000 millones)') + 
+  theme_minimal() +
+  theme(legend.title = element_blank(), 
+    panel.grid.major.x = element_blank(),
+    axis.text.x = element_text(angle = 45)) 
+
+
+p3 <- plot_grid(p1,p2, align = 'h')
+
+
+
+# counterfactual tasa ----
+# plot contrafactual
+
+
+
+p1 <- ggplot(df, aes(x=anio, y=baseIndex)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=Grupo)) +
+  theme(legend.position = 'none',axis.title.x=element_blank()) + 
+  coord_cartesian(ylim = c(97,103), expand = T) + labs(y = 'Ingreso base')
+
+p2 <- ggplot(df, aes(x=anio, y=baseIndex)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=Grupo)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=Grupo)) + 
+  # theme(legend.position = 'none') +
+  coord_cartesian(ylim = c(97,103), expand = T) 
+
+leyenda <- get_legend(p2)
+
+p2 <- ggplot(df, aes(x=anio, y=baseIndex)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=Grupo)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=Grupo)) + 
+  theme(legend.position = 'none', axis.title.x=element_blank(), axis.title.y=element_blank()) +
+  coord_cartesian(ylim = c(97,103), expand = T) 
+
+
+p4 <- ggplot(df, aes(x=anio, y=cfTasapIndex)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=Grupo)) +
+  theme(legend.position = 'none',axis.title.x=element_blank()) + 
+  coord_cartesian(ylim = c(97,103), expand = T)  + labs(y = 'Ingreso contrafactual')
+
+p3 <- ggplot(df, aes(x=anio, y=cfTasapIndex)) + 
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=Grupo)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=Grupo)) +
+  theme(legend.position = 'none',axis.title.x=element_blank(), axis.title.y=element_blank()) +
+  coord_cartesian(ylim = c(97,103), expand = T)
+
+
+p5 <- plot_grid(p1, p2, p4, p3)
+p6 <- plot_grid( p5, leyenda, rel_widths = c(3, .3))
+p7 <- add_sub(p6,label = 'Contrafactual: la tasa se fija en el nivel incial')
+
+ggdraw(p7)
+
+
+
+# Bar plot of difference in baseline revenue (by year and aggregated over years) and leverage CF
+
+dfStack <- df %>%
+  group_by(anio, Grupo) %>%
+  summarise(
+    cfLiq = sum(cfLiq, na.rm = T),
+    baseline = sum(baseline, na.rm = T),
+  ) %>%
+  mutate(diff= (cfLiq  - baseline)/1e+6) %>%
+  filter(anio != 2005)
+
+
+p1 <- ggplot(dfStack, aes(x=anio, y=diff, fill=Grupo)) +
+  geom_bar(stat='identity', position='dodge', width=.5) + 
+  geom_hline(yintercept = 0) +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
+  labs(y = 'Diferencia en ingresos (millones)', x = 'A帽os') +
+  theme_minimal() + 
+  theme(panel.grid.minor.x = element_blank(),
+    panel.grid.major.x = element_blank(),
+    axis.text.x = element_text(angle = 45))
+
+
+dfDiv <- df %>%
+  group_by(Grupo) %>%
+  summarise(
+    cfLiq = sum(cfLiq, na.rm = T),
+    baseline = sum(baseline, na.rm = T),
+  ) %>% ungroup() %>%
+  mutate(
+    diverge = (cfLiq - baseline)/1e+6,
+    divergestd = (diverge - mean(diverge, na.rm = T))/sd(diverge, na.rm = T),
+    desemp = case_when(
+      divergestd >= 0 ~ 'Ganancias',
+      divergestd < 0 ~ 'P茅rdidas',
+      TRUE ~ NA_character_
+    )
+  ) 
+
+p2 <- ggplot(dfDiv, aes(x=Grupo, y=diverge)) + 
+  geom_bar(stat='identity', aes(fill=desemp), width=.5) + 
+  geom_hline(yintercept = 0) +
+  labs(y = 'Diferencia en ingresos (millones)') + 
+  theme_minimal() +
+  theme(legend.title = element_blank(), 
+    panel.grid.major.x = element_blank(),
+    axis.text.x = element_text(angle = 45)) 
+
+
+p3 <- plot_grid(p1,p2, align = 'h')
+
+
+
+
+# checks dimensions and stuff ----
 numFirms <- length(
   unique(df$nit)
   )
@@ -589,7 +994,7 @@ df <- df %>%
 
 # Heterogeneity by sector ----
 
-# Participaci贸n de cada sector en el total de la producci贸n bruta
+# Participaci髇 de cada sector en el total de la produccion bruta
 dfStack <- df %>%
   group_by(anio, sector) %>%
   summarise(pn = sum(pn_bruta))
@@ -597,7 +1002,7 @@ dfStack <- df %>%
 ggplot(dfStack, aes(x=anio, y=pn, fill=sector)) + 
   geom_area(color='black', size=.2, alpha=.3) + theme_minimal()
 
-# Participaci贸n de cada sector en el total de exportaciones
+# Participacion de cada sector en el total de exportaciones
 dfStack <- df %>%
   group_by(anio, sector) %>%
   summarise(expo = sum(expo_fob))
@@ -622,13 +1027,16 @@ ggplot(dfStack, aes(x=anio, y=im, fill=sector)) +
 # Participaci贸n de cada grupo en el total de la producci贸n bruta
 dfStack <- df%>%
   group_by(anio, Grupo) %>%
-  summarise(pn=sum(pn_bruta))
+  summarise(pn=sum(pn_bruta)/1e+9)
 
-p1 <- ggplot(dfStack, aes(x=anio, y=pn, fill=Grupo)) + 
+ggplot(dfStack, aes(x=anio, y=pn, fill=Grupo)) + 
   geom_area(color='black', size=.2, alpha=.3) +
-  theme_minimal() 
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 9)) +
+  labs(y='Valor Produci贸n Bruta (1000 millones)', x = 'A帽o') +
+  theme_minimal() +
+  theme(panel.grid.minor.x = element_blank(),
+    legend.title = element_blank())
 
-pnStack <- p1 + theme(legend.position = 'none')
 
 # Participaci贸n de cada sector en el total de exportaciones
 dfStack <- df %>%
@@ -648,13 +1056,25 @@ ggplot(dfStack, aes(x=anio, y=im, fill=Grupo)) +
 
 
 # replicando las regresiones de Alejandra X ----
-modelo <- plm(
+
+col1 <- formula('pn_bruta ~ omega_acf_sample + wdev_expo_s + wdev_impo_s + expo_fob + impo_fob + Blev_bg + Liqui_bg + tasap + duracion_meses2p + ratio1_bg + hhi_alt + si_alt + ventas_sec_1')
+modelo0 <- lm(formula = col1, data = df)
+modelo1 <- plm(
+  formula = col1,
+  data = df,
+  index = c('nit', 'anio'),
+  model = 'within',
+  effect = 'individual'
+)
+modelo2 <- plm(
   pn_bruta ~ omega_acf_sample + wdev_expo_s + wdev_impo_s + expo_fob + impo_fob + Blev_bg + Liqui_bg + tasap + duracion_meses2p + ratio1_bg + hhi_alt + si_alt + ventas_sec_1,
   data = df,
   index = c('nit', 'anio'),
   model = 'within',
   effect = 'twoways'
   )
+
+stargazer(modelo0, modelo1, modelo2, type = 'text', align = TRUE)
 coeficientes <- data.frame(modelo$coefficients)
 
 
@@ -758,8 +1178,60 @@ p <- plot_grid( p, leyenda, rel_widths = c(3, .3))
 
 
 
-# determinantes salida de la muestra ---- 
+# counterfactual liquidez ----
+# plot contrafactual
 
+# lines
+
+df <- df %>%
+  group_by(nit) %>%
+  mutate(
+    cfLiq = 100 + (cfLiq - first(cfLiq))/cfLiq,
+    baseIndex = 100 + (baseline - first(baseline))/baseline
+  )
+
+p1 <- ggplot(df, aes(x=anio, y=baseIndex)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=Grupo)) +
+  theme(legend.position = 'none',axis.title.x=element_blank()) + 
+  coord_cartesian(ylim = c(97,101), expand = T) + labs(y = 'Ingreso base')
+
+p2 <- ggplot(df, aes(x=anio, y=baseIndex)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=Grupo)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=Grupo)) + 
+  # theme(legend.position = 'none') +
+  coord_cartesian(ylim = c(97,103), expand = T) 
+
+leyenda <- get_legend(p2)
+
+p2 <- ggplot(df, aes(x=anio, y=baseIndex)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=Grupo)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=Grupo)) + 
+  theme(legend.position = 'none', axis.title.x=element_blank(), axis.title.y=element_blank()) +
+  coord_cartesian(ylim = c(97,103), expand = T) 
+
+
+p4 <- ggplot(df, aes(x=anio, y=cfLiq)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=Grupo)) +
+  theme(legend.position = 'none',axis.title.x=element_blank()) + 
+  coord_cartesian(ylim = c(99,100), expand = T)  + labs(y = 'Ingreso contrafactual')
+
+p3 <- ggplot(df, aes(x=anio, y=cfExpoIndex2)) + 
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=Grupo)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=Grupo)) +
+  theme(legend.position = 'none',axis.title.x=element_blank(), axis.title.y=element_blank()) +
+  coord_cartesian(ylim = c(97,103), expand = T)
+
+
+p5 <- plot_grid(p1, p2, p4, p3)
+p6 <- plot_grid( p5, leyenda, rel_widths = c(3, .3))
+p7 <- add_sub(p6,label = 'Contrafactual: las exportaciones se fijan en el nivel incial') + theme_minimal()
+
+ggdraw(p7) 
+
+
+# determinantes stay en la muestra ---- 
+
+#AN罫ISIS GR罠ICO
     # stayers and leavers
 
 df1 <- df %>%
@@ -776,6 +1248,7 @@ df1 <- df %>%
     anios = max(anios)
     )
 
+
 table(df1$stayer)
 table(df1$anios)
 
@@ -791,91 +1264,135 @@ df <- df %>%
     )
   )
   
-
+  # producci髇 y productividad lado a lado
 p0 <- ggplot(df, aes(x=anio, y=pn_bruta)) + 
   stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=stayer)) +
   stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=stayer)) + 
-  theme_minimal() + theme(axis.title.y=element_blank()) + labs(title= 'Producci贸n')
+  theme_minimal() +
+  theme(
+    axis.title.y=element_blank(), 
+    legend.position="bottom", 
+    legend.title = element_blank(),
+    legend.margin = margin(c(0,0,0,0))
+    ) 
+
 leyenda3 <- get_legend(p0)
 
-p1 <- ggplot(df, aes(x=anio, y=pn_bruta)) + 
+p1 <- ggplot(df, aes(x=anio, y=pn_bruta/1e+6)) + 
   stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=stayer)) +
   stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=stayer)) + 
-  theme_minimal() + theme(axis.title.y=element_blank(), axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Producci贸n')
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
+  theme_minimal() + 
+  theme(
+    axis.title.x=element_blank(),
+    legend.position = 'none',
+    axis.text.x = element_text(angle = 60),
+    panel.grid.minor.x = element_blank()
+    ) + 
+  labs(title= 'Producci髇', y = 'Millones de pesos')
 
 
 p2 <- ggplot(df, aes(x=anio, y=omega_acf_sample)) + 
   stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=stayer)) +
-  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=stayer))  + 
-  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Productividad')
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=stayer))  +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
+  theme_minimal() + 
+  theme(
+    axis.title.x=element_blank(),
+    legend.position = 'none',
+    axis.text.x = element_text(angle = 60),
+    panel.grid.minor.x = element_blank()
+    ) + 
+  labs(title= 'Productividad', y = '%')
 
 
-p3 <- ggplot(df, aes(x=anio, y=impo_fob)) + 
+pa <- plot_grid(p1,p2)
+paa <- plot_grid(pa,
+  leyenda3,ncol = 1, 
+  rel_heights = c(1, .1))
+
+
+ggsave("~/ESPE/output/Producci髇OmegaSideBySidePlotStayers.pdf", width = 16, height = 8, units = 'in')
+
+
+# tasa creditos e impuestos lado a lado
+
+p1 <- ggplot(df, aes(x=anio, y=tasap)) + 
   stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=stayer)) +
   stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=stayer)) + 
-  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Importaciones')
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
+  theme_minimal() + 
+  theme(
+    axis.title.x=element_blank(),
+    legend.position = 'none',
+    axis.text.x = element_text(angle = 60),
+    panel.grid.minor.x = element_blank()
+  ) + 
+  labs(title= 'Tasa cr閐itos', y = '%')
 
 
-p4 <- ggplot(df, aes(x=anio, y=expo_fob)) + 
+p2 <- ggplot(df, aes(x=anio, y=ratio1_bg*100)) + 
   stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=stayer)) +
-  stat_summary(geom = 'ribbon', fun.data = mean_cl_noraxis.title.x=element_blank(),mal,alpha=0.03,linetype="dotted", aes(color=stayer)) + 
-  theme_minimal() + theme(axis.title.y=element_blank(), legend.position = 'none') + labs(title= 'Exportaciones')
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=stayer))  +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
+  theme_minimal() + 
+  theme(
+    axis.title.x=element_blank(),
+    legend.position = 'none',
+    axis.text.x = element_text(angle = 60),
+    panel.grid.minor.x = element_blank()
+  ) + 
+  labs(title= 'Tasa impuestos', y = '%')
 
 
-p5 <- ggplot(df, aes(x=anio, y=Blev_bg)) + 
-  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=stayer)) +
-  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=stayer)) + 
-  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Apalancamiento')
+pa <- plot_grid(p1,p2)
+paa <- plot_grid(pa,
+  leyenda3,ncol = 1, 
+  rel_heights = c(1, .1))
 
 
-p6 <- ggplot(df, aes(x=anio, y=Liqui_bg)) + 
-  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=stayer)) +
-  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=stayer)) + 
-  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Liquidez')
-
-pa <- plot_grid(p1,p2,p3,p4,p5,p6)
-paa <- plot_grid(pa, leyenda3,rel_widths = c(3, .3))
+ggsave("~/ESPE/output/TasasSideBySidePlotStayers.pdf", width = 16, height = 8, units = 'in')
 
 
 
-p7 <- ggplot(df, aes(x=anio, y=ratio1_bg)) + 
-  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=stayer)) +
-  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=stayer)) + 
-  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Tasa Impuestos')
+# tasas de cambio lado a lado
 
-
-p8 <- ggplot(df, aes(x=anio, y=tasap)) + 
-  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=stayer)) +
-  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=stayer)) + 
-  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Tasa cr茅dito')
-
-
-p9 <- ggplot(df, aes(x=anio, y=wdev_expo_s)) + 
-  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=stayer)) +
-  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=stayer)) + 
-  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Tasa de Cambio(X)')
-
-
-p10 <- ggplot(df, aes(x=anio, y=wdev_impo_s)) + 
+p1 <- ggplot(df, aes(x=anio, y=wdev_expo_s)) + 
   stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=stayer)) +
   stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=stayer)) + 
-  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Tasa de Cambio(M)')
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
+  theme_minimal() + 
+  theme(
+    axis.title.x=element_blank(),
+    legend.position = 'none',
+    axis.text.x = element_text(angle = 60),
+    panel.grid.minor.x = element_blank()
+  ) + 
+  labs(title= 'Tasa de cambio (X)', y = '%')
 
 
-p11 <- ggplot(df, aes(x=anio, y=ventas_sec_1)) + 
+p2 <- ggplot(df, aes(x=anio, y=wdev_impo_s)) + 
   stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=stayer)) +
-  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=stayer)) + 
-  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Ventas Sector')
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=stayer))  +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
+  theme_minimal() + 
+  theme(
+    axis.title.x=element_blank(),
+    legend.position = 'none',
+    axis.text.x = element_text(angle = 60),
+    panel.grid.minor.x = element_blank()
+  ) + 
+  labs(title= 'Tasa de cambio (M)', y = '%')
 
 
-p12 <- ggplot(df, aes(x=anio, y=si_alt)) + 
-  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=stayer)) +
-  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=stayer)) + 
-  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Participaci贸n')
+pa <- plot_grid(p1,p2)
+paa <- plot_grid(pa,
+  leyenda3,ncol = 1, 
+  rel_heights = c(1, .1))
+
+ggsave("~/ESPE/output/TasasCambioSideBySidePlotStayers.pdf", width = 16, height = 8, units = 'in')
 
 
-pb <- plot_grid(p7,p8,p9,p10,p11,p12)
-pbb <- plot_grid(pb, leyenda3,rel_widths = c(3, .3))
 
 
     #logit (probability of being a stayer)
@@ -893,6 +1410,9 @@ miformulaFE <- formula('stayer ~ pn_bruta + omega_acf_sample +
     tasap + duracion_meses2p + wdev_impo_s + wdev_expo_s + ventas_sec_1 +        
     si_alt + hhi_alt + utilidad_bruta +  sector'
   )
+
+
+
 
 dfLogit <- df %>%
   mutate(sector=factor(sector)) %>%
@@ -923,4 +1443,661 @@ modelo <- glm(miformula,data = dfLogit,family = binomial(link = 'logit'))
 modeloFE <- glm(miformulaFE,data = dfLogit,family = binomial(link = 'logit'))
 
 
+
 stargazer(modelo, modeloFE, type = "text")
+
+
+ #Salida 
+
+dfSalida <- df %>%
+  group_by(nit) %>%
+  mutate(sale0 = row_number() == n()) %>% ungroup() %>%
+  mutate(
+    sale = factor(sale0)
+  ) %>%
+  filter(
+    anio != 2013
+  )
+
+dfSalida$sale <- relevel(dfSalida$sale, ref = 'TRUE')
+
+
+
+
+# produccion y apalancamiento
+
+p0 <- ggplot(dfSalida, aes(x=anio, y=pn_bruta)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=sale)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=sale)) + 
+  theme_minimal() +
+  theme(
+    axis.title.y=element_blank(), 
+    legend.position="bottom", 
+    legend.title = element_blank(),
+    legend.margin = margin(c(0,0,0,0))
+  ) 
+
+leyenda3 <- get_legend(p0)
+
+p1 <- ggplot(dfSalida, aes(x=anio, y=pn_bruta/1e+6)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=sale)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=sale)) + 
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
+  theme_minimal() + 
+  theme(
+    axis.title.x=element_blank(),
+    legend.position = 'none',
+    axis.text.x = element_text(angle = 60),
+    panel.grid.minor.x = element_blank()
+  ) + 
+  labs(title= 'Producci髇', y = 'Millones de pesos')
+
+
+p2 <- ggplot(dfSalida, aes(x=anio, y=Blev_bg)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=sale)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=sale))  +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
+  theme_minimal() + 
+  theme(
+    axis.title.x=element_blank(),
+    legend.position = 'none',
+    axis.text.x = element_text(angle = 60),
+    panel.grid.minor.x = element_blank()
+  ) + 
+  labs(title= 'Apalancamiento', y = '%')
+
+
+pa <- plot_grid(p1,p2)
+paa <- plot_grid(pa,
+  leyenda3,ncol = 1, 
+  rel_heights = c(1, .1))
+
+
+ggsave("~/ESPE/output/Producci髇ApalaSideBySidePlotSalientes.pdf", width = 16, height = 8, units = 'in')
+
+
+
+p1 <- ggplot(dfSalida, aes(x=anio, y=expo_fob/1e+6)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=sale)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=sale)) + 
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
+  theme_minimal() + 
+  theme(
+    axis.title.x=element_blank(),
+    legend.position = 'none',
+    axis.text.x = element_text(angle = 60),
+    panel.grid.minor.x = element_blank()
+  ) + 
+  labs(title= 'Exportaciones', y = 'Millones de pesos')
+
+
+p2 <- ggplot(dfSalida, aes(x=anio, y=impo_fob/1e+6)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=sale)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=sale))  +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
+  theme_minimal() + 
+  theme(
+    axis.title.x=element_blank(),
+    legend.position = 'none',
+    axis.text.x = element_text(angle = 60),
+    panel.grid.minor.x = element_blank()
+  ) + 
+  labs(title= 'Importaciones', y = 'Millones de pesos')
+
+
+pa <- plot_grid(p1,p2)
+paa <- plot_grid(pa,
+  leyenda3,ncol = 1, 
+  rel_heights = c(1, .1))
+
+ggsave("~/ESPE/output/ExpoImpoSideBySidePlotSalientes.pdf", width = 16, height = 8, units = 'in')
+
+
+
+
+
+
+
+
+
+
+
+
+
+p0 <- ggplot(dfSalida, aes(x=anio, y=pn_bruta)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=sale)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=sale)) + 
+  theme_minimal() + theme(axis.title.y=element_blank()) + labs(title= 'Producci贸n')
+
+leyenda4 <- get_legend(p0)
+
+p1 <- ggplot(dfSalida, aes(x=anio, y=pn_bruta)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=sale)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=sale)) + 
+  theme_minimal() + theme(axis.title.y=element_blank(), axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Producci贸n')
+
+
+p2 <- ggplot(dfSalida, aes(x=anio, y=omega_acf_sample)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=sale)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=sale))  + 
+  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Productividad')
+
+
+p3 <- ggplot(dfSalida, aes(x=anio, y=impo_fob)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=sale)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=sale)) + 
+  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Importaciones')
+
+
+p4 <- ggplot(dfSalida, aes(x=anio, y=expo_fob)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=sale)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=sale)) +
+  theme_minimal() + theme(axis.title.y=element_blank(), legend.position = 'none') + labs(title= 'Exportaciones')
+
+
+p5 <- ggplot(dfSalida, aes(x=anio, y=Blev_bg)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=sale)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=sale)) + 
+  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Apalancamiento')
+
+
+p6 <- ggplot(dfSalida, aes(x=anio, y=Liqui_bg)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=sale)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=sale)) + 
+  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Liquidez')
+
+pc <- plot_grid(p1,p2,p3,p4,p5,p6)
+pcc <- plot_grid(pc, leyenda4,rel_widths = c(3, .3))
+
+
+
+
+p7 <- ggplot(dfSalida, aes(x=anio, y=ratio1_bg)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=sale)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=sale)) + 
+  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Tasa Impuestos')
+
+
+p8 <- ggplot(dfSalida, aes(x=anio, y=tasap)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=sale)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=sale)) + 
+  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Tasa cr茅dito')
+
+
+p9 <- ggplot(dfSalida, aes(x=anio, y=wdev_expo_s)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=sale)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=sale)) + 
+  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Tasa de Cambio(X)')
+
+
+p10 <- ggplot(dfSalida, aes(x=anio, y=wdev_impo_s)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=sale)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=sale)) + 
+  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Tasa de Cambio(M)')
+
+
+p11 <- ggplot(dfSalida, aes(x=anio, y=ventas_sec_1)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=sale)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=sale)) + 
+  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Ventas Sector')
+
+
+p12 <- ggplot(dfSalida, aes(x=anio, y=si_alt)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=sale)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=sale)) + 
+  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Participaci贸n')
+
+
+pd <- plot_grid(p7,p8,p9,p10,p11,p12)
+pdd <- plot_grid(pd, leyenda4,rel_widths = c(3, .3))
+
+
+
+
+miformula <- formula('sale ~  pn_bruta + omega_acf_sample +   
+    impo_fob + expo_fob + Blev_bg + Liqui_bg + ratio1_bg +          
+    tasap + duracion_meses2p + wdev_impo_s + wdev_expo_s + ventas_sec_1 +        
+    si_alt + hhi_alt + utilidad_bruta'
+)
+
+miformulaFESector <- formula('sale ~ pn_bruta + omega_acf_sample +   
+    impo_fob + expo_fob + Blev_bg + Liqui_bg + ratio1_bg +          
+    tasap + duracion_meses2p + wdev_impo_s + wdev_expo_s + ventas_sec_1 +        
+    si_alt + hhi_alt + utilidad_bruta + sector'
+)
+
+miformulaFEAnio <- formula('sale ~ pn_bruta + omega_acf_sample +   
+    impo_fob + expo_fob + Blev_bg + Liqui_bg + ratio1_bg +          
+  tasap + duracion_meses2p + wdev_impo_s + wdev_expo_s + ventas_sec_1 +        
+  si_alt + hhi_alt + utilidad_bruta + sector + anio'
+)
+
+
+dfSalidaLog <- dfSalida %>%
+  mutate(
+    pn_bruta = log(pn_bruta),
+    anio = factor(anio),
+    omega_acf_sample = log(omega_acf_sample),
+    Blev_bg = log(Blev_bg),
+    ventas_sec_1 = log(ventas_sec_1),
+    si_alt = log(si_alt),
+    hhi_alt = log(hhi_alt),
+  ) 
+
+
+
+modelo <- glm(miformula,data = dfSalidaLog,family = binomial(link = 'logit'))
+modeloFESector <- glm(miformulaFESector,data = dfSalidaLog,family = binomial(link = 'logit'))
+modeloFEAnio <- glm(miformulaFEAnio,data = dfSalidaLog,family = binomial(link = 'logit'))
+
+stargazer(modelo, modeloFESector, modeloFEAnio, type = "text")
+
+
+
+# determinantes entrada a la muestra ---- 
+
+# entrada
+
+dfEntrada <- df %>%
+  group_by(nit) %>%
+  mutate(
+    entra = row_number() == 1
+  ) %>%
+  filter(
+    anio != 2005
+  ) %>%
+  summarize(
+    entra = max(entra)
+  )
+
+table(dfEntrada$entra)
+
+dfEntrada <- df %>%
+  group_by(nit) %>%
+  mutate(
+    entra = row_number() == 1
+  ) %>%
+  filter(
+    anio != 2005
+  )
+
+
+  # Producci髇 y productividad lado a lado
+p0 <- ggplot(dfEntrada, aes(x=anio, y=pn_bruta)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=entra)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=entra)) + 
+  theme_minimal() +
+  theme(
+    axis.title.y=element_blank(), 
+    legend.position="bottom", 
+    legend.title = element_blank(),
+    legend.margin = margin(c(0,0,0,0))
+  ) 
+
+leyenda3 <- get_legend(p0)
+
+p1 <- ggplot(dfEntrada, aes(x=anio, y=pn_bruta/1e+6)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=entra)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=entra)) + 
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
+  theme_minimal() + 
+  theme(
+    axis.title.x=element_blank(),
+    legend.position = 'none',
+    axis.text.x = element_text(angle = 60),
+    panel.grid.minor.x = element_blank()
+  ) + 
+  labs(title= 'Producci髇', y = 'Millones de pesos')
+
+
+p2 <- ggplot(dfEntrada, aes(x=anio, y=omega_acf_sample)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=entra)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=entra))  +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
+  theme_minimal() + 
+  theme(
+    axis.title.x=element_blank(),
+    legend.position = 'none',
+    axis.text.x = element_text(angle = 60),
+    panel.grid.minor.x = element_blank()
+  ) + 
+  labs(title= 'Productividad', y = '%')
+
+
+pa <- plot_grid(p1,p2)
+paa <- plot_grid(pa,
+  leyenda3,ncol = 1, 
+  rel_heights = c(1, .1))
+
+
+ggsave("~/ESPE/output/Producci髇OmegaSideBySidePlotEntrants.pdf", width = 16, height = 8, units = 'in')
+
+
+
+
+p1 <- ggplot(dfEntrada, aes(x=anio, y=Blev_bg)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=entra)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=entra)) + 
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
+  theme_minimal() + 
+  theme(
+    axis.title.x=element_blank(),
+    legend.position = 'none',
+    axis.text.x = element_text(angle = 60),
+    panel.grid.minor.x = element_blank()
+  ) + 
+  labs(title= 'Apalancamiento', y = '%')
+
+
+p2 <- ggplot(dfEntrada, aes(x=anio, y=ventas_sec_1/1e+9)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=entra)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=entra))  +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
+  theme_minimal() + 
+  theme(
+    axis.title.x=element_blank(),
+    legend.position = 'none',
+    axis.text.x = element_text(angle = 60),
+    panel.grid.minor.x = element_blank()
+  ) + 
+  labs(title= 'Ventas sector', y = '1000 millones de pesos')
+
+
+pa <- plot_grid(p1,p2)
+paa <- plot_grid(pa,
+  leyenda3,ncol = 1, 
+  rel_heights = c(1, .1))
+
+
+ggsave("~/ESPE/output/AapalancaVentasSideBySidePlotEntrants.pdf", width = 16, height = 8, units = 'in')
+
+
+
+p0 <- ggplot(dfEntrada, aes(x=anio, y=pn_bruta)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=entra)) +
+  scale_color_discrete(breaks=c('FALSE', 'TRUE'), labels =c('Incumbente', 'Entrante'))+
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=entra)) + 
+  theme_minimal() + theme(axis.title.y=element_blank(), legend.title = element_blank()) + labs(title= 'Producci贸n')
+
+leyenda4 <- get_legend(p0)
+
+p1 <- ggplot(dfEntrada, aes(x=anio, y=pn_bruta)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=entra)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=entra)) + 
+  theme_minimal() + theme(axis.title.y=element_blank(), axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Producci贸n')
+
+
+p2 <- ggplot(dfEntrada, aes(x=anio, y=omega_acf_sample)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=entra)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=entra))  + 
+  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Productividad')
+
+
+p3 <- ggplot(dfEntrada, aes(x=anio, y=impo_fob)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=entra)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=entra)) + 
+  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Importaciones')
+
+
+p4 <- ggplot(dfEntrada, aes(x=anio, y=expo_fob)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=entra)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=entra)) +
+  theme_minimal() + theme(axis.title.y=element_blank(), axis.title.x=element_blank(),legend.position = 'none') + labs(title= 'Exportaciones')
+
+
+p5 <- ggplot(dfEntrada, aes(x=anio, y=Blev_bg)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=entra)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=entra)) + 
+  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Apalancamiento')
+
+
+p6 <- ggplot(dfEntrada, aes(x=anio, y=Liqui_bg)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=entra)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=entra)) + 
+  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Liquidez')
+
+pc <- plot_grid(p1,p2,p3,p4,p5,p6)
+pcc <- plot_grid(pc, leyenda4,rel_widths = c(3, .3))
+
+
+
+p7 <- ggplot(dfEntrada, aes(x=anio, y=ratio1_bg)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=entra)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=entra)) + 
+  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Tasa Impuestos')
+
+
+p8 <- ggplot(dfEntrada, aes(x=anio, y=tasap)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=entra)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=entra)) + 
+  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Tasa cr茅dito')
+
+
+p9 <- ggplot(dfEntrada, aes(x=anio, y=wdev_expo_s)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=entra)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=entra)) + 
+  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Tasa de Cambio(X)')
+
+
+p10 <- ggplot(dfEntrada, aes(x=anio, y=wdev_impo_s)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=entra)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=entra)) + 
+  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Tasa de Cambio(M)')
+
+
+p11 <- ggplot(dfEntrada, aes(x=anio, y=ventas_sec_1)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=entra)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=entra)) + 
+  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Ventas Sector')
+
+
+p12 <- ggplot(dfEntrada, aes(x=anio, y=si_alt)) + 
+  stat_summary(geom="line", fun.y=mean, linetype="solid" ,  aes(color=entra)) +
+  stat_summary(geom = 'ribbon', fun.data = mean_cl_normal,alpha=0.03,linetype="dotted", aes(color=entra)) + 
+  theme_minimal() + theme(axis.title.y=element_blank(),axis.title.x=element_blank(), legend.position = 'none') + labs(title= 'Participaci贸n')
+
+
+pd <- plot_grid(p7,p8,p9,p10,p11,p12)
+pdd <- plot_grid(pd, leyenda4,rel_widths = c(3, .3))
+
+
+
+
+miformula <- formula('entra ~  pn_bruta + omega_acf_sample +   
+  impo_fob + expo_fob + Blev_bg + Liqui_bg + ratio1_bg +          
+  tasap + duracion_meses2p + wdev_impo_s + wdev_expo_s + ventas_sec_1 +        
+  si_alt + hhi_alt + utilidad_bruta'
+)
+
+miformulaFESector <- formula('entra ~ pn_bruta + omega_acf_sample +   
+  impo_fob + expo_fob + Blev_bg + Liqui_bg + ratio1_bg +          
+  tasap + duracion_meses2p + wdev_impo_s + wdev_expo_s + ventas_sec_1 +        
+  si_alt + hhi_alt + utilidad_bruta '
+)
+
+miformulaFEAnio <- formula('entra ~ pn_bruta + omega_acf_sample +   
+  impo_fob + expo_fob + Blev_bg + Liqui_bg + ratio1_bg +          
+  tasap + duracion_meses2p + wdev_impo_s + wdev_expo_s + ventas_sec_1 +        
+  si_alt + hhi_alt + utilidad_bruta'
+)
+
+
+dfEntradaLog <- dfEntrada %>%
+  mutate(
+    pn_bruta = log(pn_bruta),
+    anio = factor(anio),
+    omega_acf_sample = log(omega_acf_sample),
+    Blev_bg = log(Blev_bg),
+    ventas_sec_1 = log(ventas_sec_1),
+    si_alt = log(si_alt),
+    hhi_alt = log(hhi_alt),
+  ) 
+
+modelo <- lm(
+  formula = miformula,
+  data = dfEntradaLog)
+
+modeloFEAnio <- plm(
+  formula = miformula,
+  data = dfEntradaLog,
+  index = c('nit', 'anio'),
+  model = 'within',
+  effect = 'time'
+)
+
+modeloFEtodo <- plm(
+  formula = miformula,
+  data = dfEntradaLog,
+  index = c('nit', 'anio'),
+  model = 'within',
+  effect = 'twoways'
+)
+
+
+stargazer(modelo, modeloFEAnio, modeloFEtodo, type = "text", align = T)
+
+
+
+# limpio: barras contrafactuales tasap-lev lado a lado ----
+
+dfStack <- df %>%
+  group_by(anio, Grupo) %>%
+  summarise(
+    cfLev = sum(cfLev, na.rm = T),
+    baseline = sum(baseline, na.rm = T),
+    cfTasap = sum(cfTasap, na.rm = T)
+  ) %>%
+  mutate(
+    diffLev= (cfLev - baseline)/1e+9,
+    diffTasap=(cfTasap - baseline)/1e+9
+    ) %>%
+  filter(anio != 2005)
+
+
+p0 <- ggplot(dfStack, aes(x=anio, y=diffLev, fill=Grupo)) +
+  geom_bar(stat='identity', position='dodge', width=.5) + 
+  geom_hline(yintercept = 0) +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
+  labs(y = 'Diferencia en ingresos (1000 millones)', x = 'A駉') +
+  theme_minimal() + 
+  theme(panel.grid.minor.x = element_blank(),
+    panel.grid.major.x = element_blank(),
+    axis.text.x = element_text(angle = 60),
+    legend.position="bottom", 
+    legend.title = element_blank(),
+    legend.margin = margin(c(0,0,0,0)))
+
+leyenda <- get_legend(p0)
+
+p1 <- ggplot(dfStack, aes(x=anio, y=diffLev, fill=Grupo)) +
+  geom_bar(stat='identity', position='dodge', width=.5) + 
+  geom_hline(yintercept = 0) +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
+  labs(y = 'Diferencia en ingresos (1000 millones)', x = 'A駉') +
+  theme_minimal() + 
+  theme(panel.grid.minor.x = element_blank(),
+    panel.grid.major.x = element_blank(),
+    legend.position = 'none',
+    axis.text.x = element_text(angle = 60), 
+    plot.margin = unit(c(0, 0, 0, 0), "cm")
+  ) +  coord_cartesian(ylim = c(-1.1,0.33), expand = T)
+
+p1a <- ggdraw(
+  add_sub(p1, "Apalancamiento fijo \nen nivel incial")
+)
+
+p2 <- ggplot(dfStack, aes(x=anio, y=diffTasap, fill=Grupo)) +
+  geom_bar(stat='identity', position='dodge', width=.5) + 
+  geom_hline(yintercept = 0) +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 8)) +
+  labs(y = 'Diferencia en ingresos (1000 millones)', x = 'A駉') +
+  theme_minimal() + 
+  theme(panel.grid.minor.x = element_blank(),
+    panel.grid.major.x = element_blank(),
+    legend.position = 'none',
+    axis.text.x = element_text(angle = 60)
+    ) +  coord_cartesian(ylim = c(-1.1,0.33), expand = T)
+
+
+p2a <- ggdraw(
+  add_sub(p2, 'Tasa promedio de cr閐itos \nfija en nivel incial')
+)
+
+pp <-plot_grid(p1a, p2a, align = 'h')
+
+pp1 <- plot_grid(pp, leyenda,
+  ncol = 1,
+  rel_heights = c(1,.1))
+
+
+
+dfSum <- dfStack%>%
+  group_by( Grupo)  %>%
+  summarise(
+    sumlev = sum(diffLev, na.rm = T), 
+    sumTasap =sum(diffTasap, na.rm = T)
+    )
+
+ggplot(dfSum, aes(x=Grupo, y=sumlev) )+ 
+  geom_bar(aes(color=Grupo))
+
+ggplot(dfSum, aes(x=anio, y=sumTasap, fill =Grupo)) + 
+  geom_line(aes(color=Grupo))
+
+
+
+
+# ribbon salientes, entrantes y stayers----
+require(tidyr)
+
+dfEntrasalestay <- df %>%
+  group_by(nit) %>%
+  mutate(
+    entra = row_number() == 1,
+    sale = row_number() == n(),
+    prevalece = anios == 9) %>%
+  filter(!(anio %in% c(2005,2013)))%>%
+  summarise(
+    entra = max(entra), 
+    sale = max(sale),
+    prevalece = max(prevalece)
+  ) %>%
+  mutate(
+    tipo = case_when(
+      entra == 1 ~ 'Entrante',
+      sale == 1 ~ 'Saliente',
+      prevalece == 1 ~ 'Superviviente', 
+      TRUE ~ NA_character_
+    )
+  )
+
+
+df1 <- full_join(df, dfEntrasalestay, by= 'nit')
+
+
+
+dfStack <- df1 %>%
+  group_by(anio, tipo) %>%
+  summarise(
+    pn_bruta =sum(pn_bruta, na.rm =T)
+  ) %>% na.omit() %>% ungroup()
+
+
+row1 <- data.frame(anio=2005,tipo="Entrante", pn_bruta=0, stringsAsFactors = F)
+row2 <- data.frame(anio=2013,tipo="Saliente", pn_bruta=0, stringsAsFactors = F)
+
+dfStack <- rbind(dfStack, row1)
+dfStack <- rbind(dfStack, row2)
+
+
+
+ggplot(dfStack, aes(x=anio, y=pn_bruta/1e+9, fill=tipo)) + 
+  geom_area(color='black', size=.2, alpha=.3) +
+  scale_x_continuous(breaks = scales::pretty_breaks(n = 9)) +
+  labs(y='Valor total producci髇 (1000 millones)', x = 'A駉') +
+  theme_minimal()+
+  theme(panel.grid.minor.x = element_blank() )
+
+
+
+
